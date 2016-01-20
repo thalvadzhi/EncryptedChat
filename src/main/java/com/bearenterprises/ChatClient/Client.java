@@ -12,10 +12,13 @@ import com.bearenterprises.Utilities.Constants;
 
 public class Client {
    private Socket socket;
+   private DataInputStream inputStream;
 
    public Client(String ip, int port) {
       try {
          socket = new Socket(ip, port);
+         InputStream input = socket.getInputStream();
+         inputStream = new DataInputStream(input);
       } catch (UnknownHostException e) {
          // TODO Use logger here
          e.printStackTrace();
@@ -41,18 +44,17 @@ public class Client {
       }
    }
 
-   public void readMessage() {
-      InputStream input = null;
+   public String readMessage() {
       try {
-         input = socket.getInputStream();
-         DataInputStream inputStream = new DataInputStream(input);
-         while (true) {
-            String message = inputStream.readUTF();
-            System.out.println(message);
-         }
+         //         while (true) {
+         String message = inputStream.readUTF();
+         //            System.out.println(message);
+         return message;
+         //         }
       } catch (IOException e) {
          // TODO Auto-generated catch block
          e.printStackTrace();
+         return "";
       }
    }
 

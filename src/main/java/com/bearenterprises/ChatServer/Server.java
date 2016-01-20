@@ -72,8 +72,13 @@ public class Server {
                System.out.println(message);
                broadcast(message);
             } catch (IOException e) {
-               // TODO Use logger here
-               e.printStackTrace();
+               //               try {
+               //                  //ocket.close();
+               //               } catch (IOException e1) {
+               //                  // TODO Auto-generated catch block
+               //                  e1.printStackTrace();
+               //               }
+               //               e.printStackTrace();
             }
          }
       }
