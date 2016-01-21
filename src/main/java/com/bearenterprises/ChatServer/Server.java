@@ -9,7 +9,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
+import com.bearenterprises.Database.DatabaseAccess;
 import com.bearenterprises.Utilities.Constants;
+import com.bearenterprises.Utilities.ServerCommands;
 
 public class Server {
    private ServerSocket serverSocket;
@@ -28,8 +30,10 @@ public class Server {
    }
 
    private void broadcast(String message) {
-      for (Socket socket : connections) {
-         sendMessage(socket, message);
+      for (WorkerThread worker : workers) {
+         if (worker.getIsAuthenticated()) {
+            sendMessage(worker.getSocket(), message);
+         }
       }
    }
 
@@ -52,25 +56,132 @@ public class Server {
 
    private class WorkerThread extends Thread {
       private Socket socket;
+      private boolean isAuthenticated;
+      private DataInputStream inputStream;
+      private DataOutputStream outputStream;
+      private String username;
+      private DatabaseAccess databaseAccess;
+
+      public Socket getSocket() {
+         return socket;
+      }
+
+      public boolean getIsAuthenticated() {
+         return isAuthenticated;
+      }
 
       public WorkerThread(Socket socket) {
          this.socket = socket;
+         isAuthenticated = false;
+         InputStream input = null;
+         OutputStream output = null;
+         username = null;
+         databaseAccess = new DatabaseAccess("C:\\Users\\thalv\\Desktop\\database.db");
+         try {
+            input = socket.getInputStream();
+            output = socket.getOutputStream();
+         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
+         inputStream = new DataInputStream(input);
+         outputStream = new DataOutputStream(output);
+      }
+
+      public boolean parseInput(String message) {
+         if (message.equals(ServerCommands.KILL_WORKER.name())) {
+            kill();
+            return true;
+         } else if (message.equals(ServerCommands.LOGIN_USER.name())) {
+            authenticate();
+            return true;
+         } else if (message.equals(ServerCommands.REGISTER_USER.name())) {
+            register();
+            return true;
+         }
+         return false;
+      }
+
+      private UserCredentials parseCredentials(String credentials) {
+         String[] credentialsSplit = credentials.split(";");
+         return new UserCredentials(credentialsSplit[0], credentialsSplit[1]);
+      }
+
+      private void register() {
+         try {
+            outputStream.writeUTF(ServerCommands.GET_CREDENTIALS.name());
+            String message = inputStream.readUTF();
+            UserCredentials credentials = parseCredentials(message);
+            boolean credentialsValid = registerIfPossible(credentials);
+            if (credentialsValid) {
+               outputStream.writeUTF(ServerCommands.USER_REGISTERED.name());
+            } else {
+               outputStream.writeUTF(ServerCommands.USER_ALREADY_EXIST.name());
+            }
+         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
+
+      }
+
+      private boolean registerIfPossible(UserCredentials credentials) {
+         if (databaseAccess.isInDatabase(credentials.getUsername())) {
+            return false;
+         } else {
+            isAuthenticated = true;
+            username = credentials.getUsername();
+            databaseAccess.addToDatabase(credentials.getUsername(),
+                  credentials.getPassword());
+            return true;
+         }
+      }
+
+      public void authenticate() {
+         try {
+            //first send command to the user to send his credentials
+            outputStream.writeUTF(ServerCommands.GET_CREDENTIALS.name());
+            String message = inputStream.readUTF();
+            //expect credentials in format username;password
+            UserCredentials credentials = parseCredentials(message);
+            boolean credentialsCorrect = verifyCredentials(credentials);
+            if (credentialsCorrect) {
+               isAuthenticated = true;
+               username = credentials.getUsername();
+               outputStream.writeUTF(ServerCommands.RIGHT_CREDENTIALS.name());
+            } else {
+               outputStream.writeUTF(ServerCommands.WRONG_CREDENTIALS.name());
+            }
+         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
+      }
+
+      private boolean verifyCredentials(UserCredentials credentials) {
+         return databaseAccess.credentialsMatch(credentials.getUsername(),
+               credentials.getPassword());
+      }
+
+      public void kill() {
+         try {
+            this.socket.close();
+         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
       }
 
       public void readMessage() {
-         InputStream input = null;
-         try {
-            input = socket.getInputStream();
-         } catch (IOException e) {
-            // TODO use logger here
-            e.printStackTrace();
-         }
-         DataInputStream dataStream = new DataInputStream(input);
          while (true) {
             try {
-               String message = dataStream.readUTF();
-               System.out.println(message);
-               broadcast(message);
+               String message = inputStream.readUTF();
+               if (parseInput(message)) {
+                  continue;
+               }
+               if (isAuthenticated) {
+                  broadcast(username + ": " + message);
+               }
             } catch (IOException e) {
                //               try {
                //                  //ocket.close();

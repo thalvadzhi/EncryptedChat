@@ -9,15 +9,19 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import com.bearenterprises.Utilities.Constants;
+import com.bearenterprises.Utilities.ServerCommands;
 
 public class Client {
    private Socket socket;
    private DataInputStream inputStream;
+   private DataOutputStream outputStream;
 
    public Client(String ip, int port) {
       try {
          socket = new Socket(ip, port);
          InputStream input = socket.getInputStream();
+         OutputStream output = socket.getOutputStream();
+         outputStream = new DataOutputStream(output);
          inputStream = new DataInputStream(input);
       } catch (UnknownHostException e) {
          // TODO Use logger here
@@ -46,15 +50,58 @@ public class Client {
 
    public String readMessage() {
       try {
-         //         while (true) {
          String message = inputStream.readUTF();
-         //            System.out.println(message);
          return message;
-         //         }
       } catch (IOException e) {
          // TODO Auto-generated catch block
          e.printStackTrace();
          return "";
+      }
+   }
+
+   public boolean login(String credentials) {
+      try {
+         outputStream.writeUTF(ServerCommands.LOGIN_USER.name());
+         //wait for the server to be read
+         String response = inputStream.readUTF();
+         if (response.equals(ServerCommands.GET_CREDENTIALS.name())) {
+            outputStream.writeUTF(credentials);
+         } else {
+            return false;
+         }
+         response = inputStream.readUTF();
+         if (response.equals(ServerCommands.RIGHT_CREDENTIALS.name())) {
+            return true;
+         } else {
+            return false;
+         }
+      } catch (IOException e) {
+         // TODO Auto-generated catch block
+         e.printStackTrace();
+         throw new RuntimeException(e);
+      }
+   }
+
+   public boolean register(String credentials) {
+      try {
+         outputStream.writeUTF(ServerCommands.REGISTER_USER.name());
+         //wait for the server to be read
+         String response = inputStream.readUTF();
+         if (response.equals(ServerCommands.GET_CREDENTIALS.name())) {
+            outputStream.writeUTF(credentials);
+         } else {
+            return false;
+         }
+         response = inputStream.readUTF();
+         if (response.equals(ServerCommands.USER_REGISTERED.name())) {
+            return true;
+         } else {
+            return false;
+         }
+      } catch (IOException e) {
+         // TODO Auto-generated catch block
+         e.printStackTrace();
+         throw new RuntimeException(e);
       }
    }
 
