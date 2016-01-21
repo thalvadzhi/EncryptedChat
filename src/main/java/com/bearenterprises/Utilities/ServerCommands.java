@@ -8,5 +8,6 @@ public enum ServerCommands {
    WRONG_CREDENTIALS,
    USER_ALREADY_EXIST,
    USER_REGISTERED,
+   EXCHANGE_KEYS,
    KILL_WORKER
 }

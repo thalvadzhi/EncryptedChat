@@ -5,11 +5,25 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+
+import javax.crypto.SecretKey;
 
 import com.bearenterprises.Database.DatabaseAccess;
+import com.bearenterprises.Encryption.AESEncryption;
+import com.bearenterprises.Encryption.RSAEncryption;
 import com.bearenterprises.Utilities.Constants;
 import com.bearenterprises.Utilities.ServerCommands;
 
@@ -17,6 +31,9 @@ public class Server {
    private ServerSocket serverSocket;
    private ArrayList<Socket> connections;
    private ArrayList<WorkerThread> workers;
+   private SecretKey AESKey;
+   private AESEncryption aesEncryption;
+
 
    public Server() {
       try {
@@ -27,12 +44,15 @@ public class Server {
       }
       connections = new ArrayList<>();
       workers = new ArrayList<>();
+      AESKey = AESEncryption.generateKey();
+      System.out.println(Arrays.toString(AESKey.getEncoded()));
+      aesEncryption = new AESEncryption(AESKey);
    }
 
    private void broadcast(String message) {
       for (WorkerThread worker : workers) {
          if (worker.getIsAuthenticated()) {
-            sendMessage(worker.getSocket(), message);
+            sendMessage(worker.getSocket(), encryptString(message));
          }
       }
    }
@@ -54,6 +74,36 @@ public class Server {
       }
    }
 
+   private String decryptMessage(byte[] message) {
+      byte[] decryptedMessage = aesEncryption.decrypt(message);
+      return byteArrayToString(decryptedMessage);
+   }
+
+   private String encryptString(String message) {
+      byte[] messageEncrypted = null;
+      try {
+         messageEncrypted = aesEncryption.encrypt(message.getBytes("UTF8"));
+      } catch (UnsupportedEncodingException e) {
+         // TODO Auto-generated catch block
+         e.printStackTrace();
+      }
+      return encode(messageEncrypted);
+   }
+
+   private String byteArrayToString(byte[] data) {
+      return new String(data, StandardCharsets.UTF_8);
+   }
+
+   private String encode(byte[] message) {
+      return Base64.getEncoder().encodeToString(message);
+   }
+
+
+   private byte[] decode(String message) {
+      return Base64.getDecoder().decode(message);
+   }
+
+
    private class WorkerThread extends Thread {
       private Socket socket;
       private boolean isAuthenticated;
@@ -61,6 +111,7 @@ public class Server {
       private DataOutputStream outputStream;
       private String username;
       private DatabaseAccess databaseAccess;
+      private PublicKey workerPublicKey;
 
       public Socket getSocket() {
          return socket;
@@ -69,6 +120,7 @@ public class Server {
       public boolean getIsAuthenticated() {
          return isAuthenticated;
       }
+
 
       public WorkerThread(Socket socket) {
          this.socket = socket;
@@ -102,10 +154,50 @@ public class Server {
          return false;
       }
 
+      private void exchangeKeys() {
+         try {
+            byte[] AESEncoded = AESKey.getEncoded();
+            outputStream.writeUTF(ServerCommands.EXCHANGE_KEYS.name());
+            //read client's public rsa
+            int lengthRSA = inputStream.readInt();
+            byte[] RSAWorker = new byte[lengthRSA];
+            inputStream.read(RSAWorker);
+            workerPublicKey = KeyFactory.getInstance("RSA")
+                  .generatePublic(new X509EncodedKeySpec(RSAWorker));
+
+            //encrypt AES key
+            byte[] AESEncrypted = encryptAESKey(AESEncoded);
+            //send encrypted key
+            outputStream.writeInt(AESEncrypted.length);
+            outputStream.write(AESEncrypted);
+            outputStream.flush();
+         } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         } catch (InvalidKeySpecException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
+      }
+
+      private byte[] encryptAESKey(byte[] aesKey) {
+         //do this because cipher doesn't support null
+         KeyPair pair = RSAEncryption.generateKeys();
+         RSAEncryption rsaEncryption =
+               new RSAEncryption(workerPublicKey, pair.getPrivate());
+         return rsaEncryption.encrypt(aesKey);
+      }
+
       private UserCredentials parseCredentials(String credentials) {
-         String[] credentialsSplit = credentials.split(";");
+         byte[] decoded = decode(credentials);
+         String credentialsDecrypted = decryptMessage(decoded);
+         String[] credentialsSplit = credentialsDecrypted.split(";");
          return new UserCredentials(credentialsSplit[0], credentialsSplit[1]);
       }
+
 
       private void register() {
          try {
@@ -180,7 +272,7 @@ public class Server {
                   continue;
                }
                if (isAuthenticated) {
-                  broadcast(username + ": " + message);
+                  broadcast(username + ": " + decryptMessage(decode(message)));
                }
             } catch (IOException e) {
                //               try {
@@ -196,6 +288,7 @@ public class Server {
 
       @Override
       public void run() {
+         exchangeKeys();
          readMessage();
       }
    }
