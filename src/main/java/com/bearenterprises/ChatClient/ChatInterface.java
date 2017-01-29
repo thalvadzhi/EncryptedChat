@@ -30,12 +30,13 @@ public class ChatInterface {
    private JFrame frame;
 
    private boolean loggedIn;
+   private String serverAddress;
 
-
-   public ChatInterface() {
-      loggedIn = false;
+   public ChatInterface(String serverAddress) {
+      this.serverAddress = serverAddress;
+	  loggedIn = false;
       frame = new JFrame();
-      client = new Client("localhost");
+      client = new Client(serverAddress);
       client.exchangeKeys();
       JPanel loginPanel = getCredentialsPanel();
       frame.add(loginPanel);
@@ -43,7 +44,7 @@ public class ChatInterface {
       frame.setSize(500, 500);
       frame.addWindowListener(new WindowAdapter() {
          public void windowClosing(WindowEvent windowEvent) {
-            //client.kill();
+            client.kill();
             System.exit(0);
          }
       });
@@ -64,13 +65,6 @@ public class ChatInterface {
 
          }
       });
-
-      //setUpFrame();
-      //      setEnterListener();
-      //      Runnable messageListen = () -> {
-      //         messageListener();
-      //      };
-      //      new Thread(messageListen).start();
 
    }
 
@@ -137,15 +131,24 @@ public class ChatInterface {
       });
    }
 
-   private String getInputFromTextFields() {
+   private String getInputFromTextFields() throws Exception {
+	   if (String.valueOf(password.getPassword()).length() < 8 || username.getText().length() < 3){
+		   throw new Exception("Password or username is too short");
+	   }
       return username.getText() + ";"
             + hashPassword(String.valueOf(password.getPassword()));
    }
 
    private void onLoginClick() {
-      String credentials = getInputFromTextFields();
+	   String credentials = null;
+	   try{
+		  credentials = getInputFromTextFields();
+	   }catch(Exception e){
+		   JOptionPane.showMessageDialog(frame, "Username or password is too short!");
+		   return;
+	   }
       loggedIn = client.login(credentials);
-      //      System.out.println("");
+      
       if (loggedIn) {
          loadPanel(getChatPanel());
          startChat();
@@ -156,7 +159,13 @@ public class ChatInterface {
    }
 
    private void onRegisterClick() {
-      String credentials = getInputFromTextFields();
+	   String credentials = null;
+	   try{
+		credentials = getInputFromTextFields();
+	   }catch(Exception e){
+		   JOptionPane.showMessageDialog(frame, "Username or password is too short!");
+		   return;
+	   }
       boolean registed = client.register(credentials);
       if (registed) {
          loadPanel(getChatPanel());
@@ -236,15 +245,6 @@ public class ChatInterface {
 
 
    public static void main(String[] args) {
-      ChatInterface gui = new ChatInterface();
-      //      //      //gui.setUpFrame();
-      //      //      Client client = new Client("192.168.0.103");
-      //      //      System.out.println(client.login("JohnDoe;weakAssPasswod"));
-      //      JFrame frame = new JFrame();
-      //      JPanel panel = gui.getChatPanel();
-      //      frame.add(panel);
-      //      frame.setVisible(true);
-      //      frame.setSize(500, 500);
-
+      ChatInterface gui = new ChatInterface("localhost");
    }
 }

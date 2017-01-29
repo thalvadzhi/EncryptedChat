@@ -27,8 +27,9 @@ import com.bearenterprises.Encryption.RSAEncryption;
 import com.bearenterprises.Utilities.Constants;
 import com.bearenterprises.Utilities.ServerCommands;
 
-public class Server {
+public class Server extends Thread{
    private ServerSocket serverSocket;
+   private boolean isAlive;
    private ArrayList<Socket> connections;
    private ArrayList<WorkerThread> workers;
    private SecretKey AESKey;
@@ -40,8 +41,9 @@ public class Server {
          serverSocket = new ServerSocket(Constants.serverPortNumber);
       } catch (IOException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       }
+	  isAlive = true;
       connections = new ArrayList<>();
       workers = new ArrayList<>();
       AESKey = AESEncryption.generateKey();
@@ -62,14 +64,14 @@ public class Server {
          stream = socket.getOutputStream();
       } catch (IOException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       }
       DataOutputStream outputStream = new DataOutputStream(stream);
       try {
          outputStream.writeUTF(message);
       } catch (IOException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       }
    }
 
@@ -84,7 +86,7 @@ public class Server {
          messageEncrypted = aesEncryption.encrypt(message.getBytes("UTF8"));
       } catch (UnsupportedEncodingException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
       }
       return encode(messageEncrypted);
    }
@@ -134,7 +136,7 @@ public class Server {
             output = socket.getOutputStream();
          } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          }
          inputStream = new DataInputStream(input);
          outputStream = new DataOutputStream(output);
@@ -173,13 +175,13 @@ public class Server {
             outputStream.flush();
          } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          } catch (InvalidKeySpecException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          } catch (NoSuchAlgorithmException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          }
       }
 
@@ -212,7 +214,7 @@ public class Server {
             }
          } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          }
 
       }
@@ -246,7 +248,7 @@ public class Server {
             }
          } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          }
       }
 
@@ -260,7 +262,7 @@ public class Server {
             this.socket.close();
          } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
          }
       }
 
@@ -275,13 +277,6 @@ public class Server {
                   broadcast(username + ": " + decryptMessage(decode(message)));
                }
             } catch (IOException e) {
-               //               try {
-               //                  //ocket.close();
-               //               } catch (IOException e1) {
-               //                  // TODO Auto-generated catch block
-               //                  e1.printStackTrace();
-               //               }
-               //               e.printStackTrace();
             }
          }
       }
@@ -294,9 +289,8 @@ public class Server {
    }
 
    public void serve() {
-      System.out.println("Starting server...");
       Socket socket = null;
-      while (true) {
+      while (isAlive) {
          try {
             socket = serverSocket.accept();
             connections.add(socket);
@@ -305,22 +299,27 @@ public class Server {
             workers.add(worker);
          } catch (IOException e) {
             // TODO Use logger here
-            e.printStackTrace();
+            // e.printStackTrace();
          }
       }
    }
 
    public void kill() {
       try {
+		 isAlive = false;
+		 for(WorkerThread worker : workers){
+			 worker.kill();
+		 }
          serverSocket.close();
+		 System.exit(0);
       } catch (IOException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
+         // TODO Use logger here
+         // e.printStackTrace();
       }
    }
-
-   public static void main(String[] args) {
-      Server server = new Server();
-      server.serve();
+   
+   @Override 
+   public void run(){
+	   serve();
    }
 }

@@ -45,10 +45,10 @@ public class Client {
          rsaEncryption = new RSAEncryption(publicKey, privateKey);
       } catch (UnknownHostException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       } catch (IOException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       }
    }
 
@@ -66,7 +66,7 @@ public class Client {
          messageEncrypted = aesEncryption.encrypt(message.getBytes("UTF8"));
       } catch (UnsupportedEncodingException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
       }
       return encode(messageEncrypted);
    }
@@ -88,7 +88,7 @@ public class Client {
          outputStream.writeUTF(encryptString(message));
       } catch (IOException e) {
          // TODO Use logger here
-         e.printStackTrace();
+         // e.printStackTrace();
       }
    }
 
@@ -99,7 +99,7 @@ public class Client {
          return byteArrayToString(decryptedMessage);
       } catch (IOException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
          return "";
       }
    }
@@ -122,7 +122,7 @@ public class Client {
          }
       } catch (IOException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
          throw new RuntimeException(e);
       }
    }
@@ -145,7 +145,7 @@ public class Client {
          }
       } catch (IOException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
          throw new RuntimeException(e);
       }
    }
@@ -168,7 +168,7 @@ public class Client {
          return false;
       } catch (IOException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
          return false;
       }
    }
@@ -184,7 +184,7 @@ public class Client {
          socket.close();
       } catch (IOException e) {
          // TODO Auto-generated catch block
-         e.printStackTrace();
+         // e.printStackTrace();
       }
    }
 
