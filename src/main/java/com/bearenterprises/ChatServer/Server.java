@@ -2,6 +2,7 @@ package com.bearenterprises.ChatServer;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,7 +17,6 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 
 import javax.crypto.SecretKey;
@@ -45,7 +45,6 @@ public class Server {
       connections = new ArrayList<>();
       workers = new ArrayList<>();
       AESKey = AESEncryption.generateKey();
-      System.out.println(Arrays.toString(AESKey.getEncoded()));
       aesEncryption = new AESEncryption(AESKey);
    }
 
@@ -128,7 +127,8 @@ public class Server {
          InputStream input = null;
          OutputStream output = null;
          username = null;
-         databaseAccess = new DatabaseAccess("C:\\Users\\thalv\\Desktop\\database.db");
+         databaseAccess =
+               new DatabaseAccess("resources" + File.separator + "database.db");
          try {
             input = socket.getInputStream();
             output = socket.getOutputStream();

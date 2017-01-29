@@ -35,7 +35,7 @@ public class ChatInterface {
    public ChatInterface() {
       loggedIn = false;
       frame = new JFrame();
-      client = new Client("87.120.102.118");
+      client = new Client("localhost");
       client.exchangeKeys();
       JPanel loginPanel = getCredentialsPanel();
       frame.add(loginPanel);

@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Arrays;
 import java.util.Base64;
 
 import javax.crypto.SecretKey;
@@ -177,7 +176,6 @@ public class Client {
    private void decryptAESKey(byte[] encryptedKey) {
       byte[] AESDecrypted = rsaEncryption.decrypt(encryptedKey);
       AESKey = new SecretKeySpec(AESDecrypted, 0, AESDecrypted.length, "AES");
-      System.out.println(Arrays.toString(AESKey.getEncoded()));
       aesEncryption = new AESEncryption(AESKey);
    }
 
